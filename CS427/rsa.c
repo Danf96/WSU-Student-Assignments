@@ -7,6 +7,7 @@
 #include <stdint.h>
 #include <inttypes.h>
 #include <time.h>
+#include <unistd.h>
 
 uint16_t randPrime(); 								//gets random number, runs miller-rabin test on it 20 times and gets a new number if it fails
 uint64_t strToInt(char * input); 					//converts string to 64 bit unsigned int, taken from my feistel network assignment
@@ -22,18 +23,18 @@ int main (int argc, char *argv[]){
 	srandom(time(0));
 	char inputBuffer[1024];
 	char * token;
-	char * string;
-	fgets(inputBuffer, 1024, stdin);
+	int bytesRead;
+	bytesRead = read(0, inputBuffer, sizeof inputBuffer);
 	token = strtok(inputBuffer, " ");
 	if (!strcmp("sign", token)){ 		//do one more strtok then pass it to sign func
-		token = strtok(NULL, " ");
-		token[strcspn(token, "\n")] = '\0'; //scans until null terminator then removes it
+		token = strtok(NULL, "\"");
+		token[strcspn(token, "\"")] = '\0'; //scans until next quotation mark then removes it
 		signSig(token);
 	}else if (!strcmp("verify", token)){ 
 		char * args[3];
 		args[0] = strtok(NULL, " ");
-		args[1] = strtok(NULL, " ");
-		args[1][strcspn(args[1], "\n")] = '\0';
+		args[1] = strtok(NULL, "\"");
+		args[1][strcspn(args[1], "\"")] = '\0';
 		args[2] = strtok(NULL, " ");
 		uint32_t n;
 		uint64_t signedHash;
@@ -52,7 +53,7 @@ void signSig(char * string){ 	//p and q = random primes, n= modulus, t= totient
 	uint32_t e = 65537;
 	uint32_t t = eulersTotient(p,q);
 	printf("p = %"PRIx16 ", q = %"PRIx16 ", n = %" PRIx32 ", t = %" PRIx32 "\n", p, q, n ,t);
-	printf("received message: %s\n", string);
+	printf("received message: %s.\n", string);
 	uint32_t hashedStr = ElfHash(string);
 	printf("message hash: %"PRIx32 "\n", hashedStr);
 	//calculate d as mult inverse of e mod totient
@@ -61,7 +62,7 @@ void signSig(char * string){ 	//p and q = random primes, n= modulus, t= totient
 	uint64_t signedHash = fastModExpRecursive((uint64_t)hashedStr, (uint64_t)privKey, n);
 	printf("signed hash: %"PRIx64 "\n", signedHash);
 	printf("uninverted message to ensure integrity: %"PRIx32 "\n", hashedStr);
-	printf("complete output for verification:\n%"PRIx32 " %s %"PRIx64 "\n", n, string, signedHash);
+	printf("complete output for verification:\n%"PRIx32 " \"%s\" %"PRIx64 "\n", n, string, signedHash);
 }
 uint32_t extendedEuclid(uint32_t a, uint32_t b){
 	int64_t old_r, r, old_s, s, old_t, t, quotient, temp;
